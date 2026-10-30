@@ -10,7 +10,7 @@ export default function DespensaScreen() {
 
   return (
     <View style={s.pantalla}>
-      <Text style={s.titulo}>Despensa</Text>
+      <Text style={s.titulo}>Despensa Inteligente</Text>
 
       <FormularioIngrediente
         nombre={d.nombre}
