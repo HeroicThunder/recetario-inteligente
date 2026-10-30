@@ -1,4 +1,5 @@
-import { View, Text, FlatList, StyleSheet } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { colores } from "../theme";
 import { useDespensa } from "../hooks/useDespensa";
 import FormularioIngrediente from "../components/FormularioIngrediente";
@@ -7,10 +8,15 @@ import ModalEditarIngrediente from "../components/ModalEditarIngrediente";
 
 export default function DespensaScreen() {
   const d = useDespensa();
+  const router = useRouter();
 
   return (
     <View style={s.pantalla}>
-      <Text style={s.titulo}>Despensa Inteligente</Text>
+      <Text style={s.titulo}>Despensa</Text>
+
+      <Pressable style={s.sugerir} onPress={() => router.push("/sugerencias")}>
+        <Text style={s.sugerirTexto}>¿Qué cocino hoy? →</Text>
+      </Pressable>
 
       <FormularioIngrediente
         nombre={d.nombre}
@@ -63,7 +69,16 @@ const s = StyleSheet.create({
     fontWeight: "300",
     letterSpacing: -0.5,
     color: colores.tinta,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   vacio: { marginTop: 24, color: colores.gris },
+  sugerir: {
+    borderWidth: 1.5,
+    borderColor: colores.cobalto,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderRadius: 2,
+    marginBottom: 24,
+  },
+  sugerirTexto: { color: colores.cobalto, fontWeight: "600", fontSize: 16 },
 });
