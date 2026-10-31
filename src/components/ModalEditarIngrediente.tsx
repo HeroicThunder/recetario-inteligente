@@ -6,7 +6,7 @@ import {
   Modal,
   StyleSheet,
 } from "react-native";
-import { colores } from "../theme";
+import { colores, fuentes } from "../theme";
 import { comunes } from "./estilosComunes";
 import UnidadSelector from "./UnidadSelector";
 
@@ -81,12 +81,12 @@ export default function ModalEditarIngrediente({
 const s = StyleSheet.create({
   fondoModal: {
     flex: 1,
-    backgroundColor: "rgba(22, 33, 62, 0.45)",
+    backgroundColor: "rgba(30, 61, 50, 0.45)",
     justifyContent: "center",
     padding: 24,
   },
   hoja: {
-    backgroundColor: colores.porcelana,
+    backgroundColor: colores.crema,
     padding: 24,
     borderRadius: 2,
     width: "100%",
@@ -95,11 +95,15 @@ const s = StyleSheet.create({
   },
   tituloModal: {
     fontSize: 24,
-    fontWeight: "300",
-    color: colores.tinta,
+    fontFamily: fuentes.titulo,
+    color: colores.bosque,
     marginBottom: 16,
   },
   accionesModal: { flexDirection: "row", justifyContent: "space-between" },
-  eliminar: { color: "#B3261E", fontSize: 16, fontWeight: "600" },
-  cancelar: { color: colores.gris, fontSize: 16 },
+  eliminar: {
+    color: colores.terracota,
+    fontSize: 16,
+    fontFamily: fuentes.negrita,
+  },
+  cancelar: { color: colores.gris, fontSize: 16, fontFamily: fuentes.texto },
 });

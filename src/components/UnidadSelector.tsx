@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { colores } from "../theme";
+import { colores, fuentes } from "../theme";
 
 // Unidades disponibles: peso, volumen y piezas (catsup, mayonesa, huevos, etc.)
 export const UNIDADES = ["g", "kg", "ml", "l", "pza"];
@@ -36,10 +36,7 @@ const s = StyleSheet.create({
     borderColor: colores.linea,
     borderRadius: 2,
   },
-  chipActivo: {
-    backgroundColor: colores.cobalto,
-    borderColor: colores.cobalto,
-  },
-  chipTexto: { color: colores.tinta, fontSize: 15 },
-  chipTextoActivo: { color: colores.porcelana, fontWeight: "600" },
+  chipActivo: { backgroundColor: colores.bosque, borderColor: colores.bosque },
+  chipTexto: { color: colores.bosque, fontSize: 15, fontFamily: fuentes.texto },
+  chipTextoActivo: { color: colores.crema, fontFamily: fuentes.negrita },
 });

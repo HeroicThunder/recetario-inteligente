@@ -6,14 +6,14 @@ import {
   TipoError,
 } from "../services/ErrorGemini";
 import { sugerirRecetas } from "../services/recetas";
-import type { Receta } from "../types/receta";
+import type { RecetaEvaluada } from "../types/receta";
 
 type Estado = "cargando" | "resultados" | "error";
 
 // Estado de la pantalla de sugerencias (feature F02). Al montarse pide las recetas automáticamente.
-export function useRecetas() {
+export function useRecetas(principal?: string) {
   const [estado, setEstado] = useState<Estado>("cargando");
-  const [recetas, setRecetas] = useState<Receta[]>([]);
+  const [recetas, setRecetas] = useState<RecetaEvaluada[]>([]);
   const [mensaje, setMensaje] = useState("");
   const [tipoError, setTipoError] = useState<TipoError | null>(null);
 
@@ -30,7 +30,7 @@ export function useRecetas() {
     try {
       await iniciarDb();
       const inventario = await listarIngredientes();
-      const resultado = await sugerirRecetas(inventario);
+      const resultado = await sugerirRecetas(inventario, principal);
       if (!montado.current) return;
       setRecetas(resultado.recetas);
       setEstado("resultados");
@@ -42,7 +42,7 @@ export function useRecetas() {
     } finally {
       enCurso.current = false;
     }
-  }, []);
+  }, [principal]);
 
   useEffect(() => {
     montado.current = true;

@@ -34,8 +34,12 @@ export const ESQUEMA_RECETAS = {
   },
 };
 
-// Construye el prompt a partir del inventario actual
-export function construirPrompt(inventario: Ingrediente[]): string {
+// Construye el prompt a partir del inventario actual.
+// Si se indica un ingrediente principal, todas las recetas deben tenerlo como protagonista.
+export function construirPrompt(
+  inventario: Ingrediente[],
+  principal?: string,
+): string {
   const lista = inventario
     .map((i) => `- ${i.nombre}: ${i.cantidad} ${i.unidad}`)
     .join("\n");
@@ -47,12 +51,17 @@ export function construirPrompt(inventario: Ingrediente[]): string {
     lista,
     "",
     "Reglas obligatorias:",
-    "1. Usa únicamente ingredientes de la lista. La única excepción son el agua y la sal, que puedes usar sin límite.",
-    "2. Nunca pidas más cantidad de la disponible de un ingrediente.",
-    "3. Escribe cada ingrediente con el mismo nombre y la misma unidad que aparecen en la lista.",
-    "4. Propón 3 recetas distintas. Si con lo disponible no es posible armar 3, devuelve menos.",
+    "1. Prioriza los ingredientes de la lista. Puedes agregar como máximo 3 ingredientes extra que no estén en ella (comunes y fáciles de conseguir). El agua y la sal no cuentan como extras.",
+    "2. Para un ingrediente de la lista, usa el mismo nombre y la misma unidad, y nunca pidas más cantidad de la disponible.",
+    "3. Para los extras indica una cantidad realista y una unidad entre g, kg, ml, l o pza.",
+    "4. Propón 3 recetas distintas, de la que usa más ingredientes de la lista a la que usa menos. Si no es posible armar 3, devuelve menos.",
     "5. La descripción debe tener máximo 20 palabras y estar en español.",
     "6. El tiempo va en minutos y la dificultad es facil, media o dificil.",
     "7. Responde únicamente con el JSON solicitado, sin texto adicional.",
+    ...(principal
+      ? [
+          `8. Todas las recetas deben tener como ingrediente protagonista: ${principal}.`,
+        ]
+      : []),
   ].join("\n");
 }

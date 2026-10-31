@@ -1,5 +1,5 @@
 import { Text, Pressable, StyleSheet } from "react-native";
-import { colores } from "../theme";
+import { colores, fuentes } from "../theme";
 import { Ingrediente } from "../db/database";
 
 type Props = {
@@ -26,6 +26,10 @@ const s = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderColor: colores.linea,
   },
-  nombre: { fontSize: 17, color: colores.tinta },
-  cantidad: { fontSize: 17, color: colores.cobalto, fontWeight: "600" },
+  nombre: { fontSize: 17, color: colores.bosque, fontFamily: fuentes.texto },
+  cantidad: {
+    fontSize: 17,
+    color: colores.bosque,
+    fontFamily: fuentes.negrita,
+  },
 });

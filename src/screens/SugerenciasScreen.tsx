@@ -6,15 +6,17 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { colores } from "../theme";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { colores, fuentes } from "../theme";
 import { useRecetas } from "../hooks/useRecetas";
 import RecetaCard from "../components/RecetaCard";
 import { comunes } from "../components/estilosComunes";
 
 export default function SugerenciasScreen() {
   const router = useRouter();
-  const { estado, recetas, mensaje, tipoError, sugerir } = useRecetas();
+  const { principal } = useLocalSearchParams<{ principal?: string }>(); // modo 2: ingrediente principal
+  const { estado, recetas, mensaje, tipoError, sugerir } =
+    useRecetas(principal);
 
   return (
     <View style={s.pantalla}>
@@ -22,10 +24,13 @@ export default function SugerenciasScreen() {
         <Text style={s.volver}>← Despensa</Text>
       </Pressable>
       <Text style={s.titulo}>Sugerencias</Text>
+      {principal ? (
+        <Text style={s.modo}>Con {principal} como protagonista</Text>
+      ) : null}
 
       {estado === "cargando" && (
         <View style={s.centro}>
-          <ActivityIndicator size="large" color={colores.cobalto} />
+          <ActivityIndicator size="large" color={colores.bosque} />
           <Text style={s.mensaje}>Buscando recetas con lo que tienes…</Text>
         </View>
       )}
@@ -57,8 +62,8 @@ export default function SugerenciasScreen() {
             recetas.length < 3 ? (
               <Text style={s.aviso}>
                 Solo encontré {recetas.length}{" "}
-                {recetas.length === 1 ? "opción viable" : "opciones viables"}{" "}
-                con tu despensa actual.
+                {recetas.length === 1 ? "opción" : "opciones"} que se acerquen a
+                tu despensa actual.
               </Text>
             ) : null
           }
@@ -76,17 +81,28 @@ export default function SugerenciasScreen() {
 const s = StyleSheet.create({
   pantalla: {
     flex: 1,
-    backgroundColor: colores.porcelana,
+    backgroundColor: colores.crema,
     padding: 24,
     paddingTop: 64,
   },
-  volver: { fontSize: 16, color: colores.cobalto, marginBottom: 12 },
+  volver: {
+    fontSize: 16,
+    color: colores.bosque,
+    marginBottom: 12,
+    fontFamily: fuentes.texto,
+  },
   titulo: {
     fontSize: 34,
-    fontWeight: "300",
+    fontFamily: fuentes.titulo,
     letterSpacing: -0.5,
-    color: colores.tinta,
+    color: colores.bosque,
     marginBottom: 16,
+  },
+  modo: {
+    fontSize: 14,
+    color: colores.gris,
+    marginBottom: 12,
+    fontFamily: fuentes.texto,
   },
   centro: {
     flex: 1,
@@ -97,11 +113,21 @@ const s = StyleSheet.create({
   mensaje: {
     marginTop: 16,
     fontSize: 16,
-    color: colores.tinta,
+    color: colores.bosque,
     textAlign: "center",
+    fontFamily: fuentes.texto,
   },
   botonCentro: { paddingHorizontal: 28 },
-  aviso: { fontSize: 14, color: colores.gris, marginBottom: 4 },
+  aviso: {
+    fontSize: 14,
+    color: colores.gris,
+    marginBottom: 4,
+    fontFamily: fuentes.texto,
+  },
   otras: { paddingVertical: 24, alignItems: "center" },
-  otrasTexto: { fontSize: 16, color: colores.cobalto, fontWeight: "600" },
+  otrasTexto: {
+    fontSize: 16,
+    color: colores.bosque,
+    fontFamily: fuentes.negrita,
+  },
 });

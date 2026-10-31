@@ -15,3 +15,11 @@ export type Receta = {
   dificultad: Dificultad;
   ingredientes: IngredienteReceta[];
 };
+
+// Receta ya comparada con la despensa: qué ingredientes hay, cuáles faltan y qué porcentaje se cubre.
+// El agua y la sal no se cuentan (se asumen disponibles).
+export type RecetaEvaluada = Receta & {
+  disponibles: IngredienteReceta[];
+  faltantes: IngredienteReceta[]; // en "cantidad" va lo que falta, no la cantidad total de la receta
+  porcentaje: number; // de 0 a 100
+};
