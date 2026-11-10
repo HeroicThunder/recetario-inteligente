@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { iniciarDb, listarIngredientes } from "../db/database";
+import {
+  iniciarDb,
+  inicializarAutenticacion,
+  listarIngredientes,
+} from "../db/database";
 import {
   ErrorGemini,
   mensajeParaUsuario,
@@ -29,6 +33,7 @@ export function useRecetas(principal?: string) {
 
     try {
       await iniciarDb();
+      await inicializarAutenticacion();
       const inventario = await listarIngredientes();
       const resultado = await sugerirRecetas(inventario, principal);
       if (!montado.current) return;

@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert } from "react-native";
 import {
   iniciarDb,
+  inicializarAutenticacion,
   listarIngredientes,
   agregarIngrediente,
   actualizarIngrediente,
   eliminarIngrediente,
-  Ingrediente,
+  type Ingrediente,
 } from "../db/database";
 import { normalizar } from "../utils/texto";
 
@@ -25,13 +26,20 @@ export function useDespensa() {
   const [eCantidad, setECantidad] = useState("");
   const [eUnidad, setEUnidad] = useState("g");
 
-  const cargar = useCallback(
-    async () => setItems(await listarIngredientes()),
-    [],
-  );
+  const cargar = useCallback(async () => {
+    try {
+      await iniciarDb();
+      await inicializarAutenticacion();
+
+      const ingredientes = await listarIngredientes();
+      setItems(ingredientes);
+    } catch (error) {
+      console.error("Error cargando despensa:", error);
+    }
+  }, []);
 
   useEffect(() => {
-    iniciarDb().then(cargar);
+    cargar();
   }, [cargar]);
 
   const guardar = async () => {

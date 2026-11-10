@@ -11,6 +11,7 @@ import { colores, fuentes } from "../theme";
 import { useRecetas } from "../hooks/useRecetas";
 import RecetaCard from "../components/RecetaCard";
 import { comunes } from "../components/estilosComunes";
+import BarraNavegacion from "../components/BarraNavegacion";
 
 export default function SugerenciasScreen() {
   const router = useRouter();
@@ -74,6 +75,7 @@ export default function SugerenciasScreen() {
           }
         />
       )}
+      <BarraNavegacion />
     </View>
   );
 }

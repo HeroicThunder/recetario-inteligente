@@ -15,8 +15,10 @@ import { colores, fuentes, radios } from "../../theme";
 import {
   iniciarDb,
   inicializarAutenticacion,
-  iniciarSesionLocal,
+  obtenerOCrearUsuarioSupabase,
 } from "../../db/database";
+
+import { supabase } from "../../services/supabase";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -33,9 +35,37 @@ export default function LoginScreen() {
 
     try {
       setCargando(true);
+
       await iniciarDb();
       await inicializarAutenticacion();
-      await iniciarSesionLocal(correo, password);
+
+      // Autenticar al usuario con Supabase.
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: correo.trim().toLowerCase(),
+        password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error("No se pudieron obtener los datos del usuario.");
+      }
+
+      // Recuperar el nombre guardado durante el registro.
+      const nombre =
+        data.user.user_metadata?.nombre ||
+        data.user.email?.split("@")[0] ||
+        "Usuario";
+
+      // Crear o recuperar su perfil local en SQLite.
+      await obtenerOCrearUsuarioSupabase(
+        data.user.id,
+        data.user.email ?? correo.trim().toLowerCase(),
+        nombre,
+      );
+
       router.replace("/");
     } catch (error) {
       Alert.alert(
@@ -104,10 +134,6 @@ export default function LoginScreen() {
             <Text style={styles.botonTexto}>
               {cargando ? "Iniciando sesión..." : "Iniciar sesión"}
             </Text>
-          </Pressable>
-
-          <Pressable onPress={() => router.push("/recuperar")}>
-            <Text style={styles.enlace}> ¿Olvidaste tu contraseña?</Text>
           </Pressable>
 
           <Pressable

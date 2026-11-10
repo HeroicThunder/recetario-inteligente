@@ -15,8 +15,10 @@ import { colores, fuentes, radios } from "../../theme";
 import {
   iniciarDb,
   inicializarAutenticacion,
-  registrarUsuario,
+  obtenerOCrearUsuarioSupabase,
 } from "../../db/database";
+
+import { supabase } from "../../services/supabase";
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -53,13 +55,57 @@ export default function RegisterScreen() {
 
     try {
       setCargando(true);
+
       await iniciarDb();
       await inicializarAutenticacion();
 
-      await registrarUsuario(nombre, correo, password);
+      const { data, error } = await supabase.auth.signUp({
+        email: correo.trim().toLowerCase(),
+        password: password,
+        options: {
+          data: {
+            nombre: nombre.trim(),
+          },
+        },
+      });
 
-      Alert.alert("¡Cuenta creada!", "Tu cuenta local de SazónIA está lista.", [
-        { text: "Continuar", onPress: () => router.replace("/") },
+      if (error) {
+        throw error;
+      }
+
+      if (!data.user) {
+        throw new Error("Supabase no devolvió los datos del usuario.");
+      }
+
+      // Si Supabase requiere confirmar el correo,
+      // todavía no existe una sesión autenticada.
+      if (!data.session) {
+        Alert.alert(
+          "Revisa tu correo",
+          "Tu cuenta fue creada. Confirma tu correo electrónico para poder iniciar sesión.",
+          [
+            {
+              text: "Continuar",
+              onPress: () => router.replace("/login"),
+            },
+          ],
+        );
+
+        return;
+      }
+
+      // Crear o recuperar el perfil local de SQLite.
+      await obtenerOCrearUsuarioSupabase(
+        data.user.id,
+        data.user.email ?? correo.trim().toLowerCase(),
+        nombre.trim(),
+      );
+
+      Alert.alert("¡Cuenta creada!", "Tu cuenta de SazónIA está lista.", [
+        {
+          text: "Continuar",
+          onPress: () => router.replace("/"),
+        },
       ]);
     } catch (error) {
       Alert.alert(
