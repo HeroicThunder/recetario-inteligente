@@ -1,6 +1,6 @@
+
 import type { Ingrediente } from "../db/database";
 
-// Esquema JSON que Gemini debe respetar: hasta 3 recetas con la estructura de la spec F02
 export const ESQUEMA_RECETAS = {
   type: "array",
   maxItems: 3,
@@ -10,9 +10,13 @@ export const ESQUEMA_RECETAS = {
       nombre: { type: "string" },
       descripcion: { type: "string" },
       tiempo_minutos: { type: "integer" },
-      dificultad: { type: "string", enum: ["facil", "media", "dificil"] },
+      dificultad: {
+        type: "string",
+        enum: ["facil", "media", "dificil"],
+      },
       ingredientes: {
         type: "array",
+        minItems: 1,
         items: {
           type: "object",
           properties: {
@@ -23,6 +27,10 @@ export const ESQUEMA_RECETAS = {
           required: ["nombre", "cantidad", "unidad"],
         },
       },
+      procedimiento: {
+        type: "array",
+        items: { type: "string" },
+      },
     },
     required: [
       "nombre",
@@ -30,37 +38,47 @@ export const ESQUEMA_RECETAS = {
       "tiempo_minutos",
       "dificultad",
       "ingredientes",
+      "procedimiento",
     ],
   },
 };
 
-// Construye el prompt a partir del inventario actual.
-// Si se indica un ingrediente principal, todas las recetas deben tenerlo como protagonista.
 export function construirPrompt(
   inventario: Ingrediente[],
   principal?: string,
 ): string {
   const lista = inventario
+    .filter((i) => i.cantidad > 0)
     .map((i) => `- ${i.nombre}: ${i.cantidad} ${i.unidad}`)
     .join("\n");
 
   return [
-    "Eres un asistente culinario. Propón recetas que el usuario pueda preparar con lo que tiene en su despensa.",
+    "Eres un chef profesional y asistente culinario.",
+    "Debes crear recetas que el usuario pueda preparar COMPLETAMENTE con su despensa actual.",
     "",
-    'Despensa del usuario (nombre: cantidad unidad). La unidad "pza" significa piezas:',
+    "INVENTARIO REAL DEL USUARIO:",
     lista,
     "",
-    "Reglas obligatorias:",
-    "1. Prioriza los ingredientes de la lista. Puedes agregar como máximo 3 ingredientes extra que no estén en ella (comunes y fáciles de conseguir). El agua y la sal no cuentan como extras.",
-    "2. Para un ingrediente de la lista, usa el mismo nombre y la misma unidad, y nunca pidas más cantidad de la disponible.",
-    "3. Para los extras indica una cantidad realista y una unidad entre g, kg, ml, l o pza.",
-    "4. Propón 3 recetas distintas, de la que usa más ingredientes de la lista a la que usa menos. Si no es posible armar 3, devuelve menos.",
-    "5. La descripción debe tener máximo 20 palabras y estar en español.",
-    "6. El tiempo va en minutos y la dificultad es facil, media o dificil.",
-    "7. Responde únicamente con el JSON solicitado, sin texto adicional.",
+    "REGLAS OBLIGATORIAS:",
+    "1. UTILIZA EXCLUSIVAMENTE ingredientes que aparezcan en el inventario.",
+    "2. Está PROHIBIDO agregar ingredientes externos, aunque sean agua, sal, aceite, especias o condimentos.",
+    "3. Escribe el nombre de cada ingrediente exactamente como aparece en el inventario.",
+    "4. Utiliza la misma unidad que aparece en el inventario.",
+    "5. Nunca solicites una cantidad superior a la disponible.",
+    "6. La suma de las cantidades de un ingrediente repetido no puede superar su existencia total.",
+    "7. Si no puedes crear una receta completa con los ingredientes disponibles, no la propongas.",
+    "8. No inventes ingredientes ni supongas que el usuario tiene productos que no aparecen en la lista.",
+    "9. Propón hasta 3 recetas diferentes, utilizando la mayor cantidad posible de ingredientes disponibles.",
+    "10. Cada receta debe tener una descripción breve, en español y de máximo 20 palabras.",
+    "11. El tiempo debe expresarse en minutos.",
+    "12. La dificultad debe ser facil, media o dificil.",
+    "13. Cada receta debe incluir entre 4 y 8 pasos de preparación.",
+    "14. Explica cada paso con acciones concretas, tiempos y temperaturas cuando sean necesarios.",
+    "15. No incluyas ingredientes que no aparezcan en el inventario ni en el procedimiento.",
+    "16. Devuelve exclusivamente el JSON solicitado.",
     ...(principal
       ? [
-          `8. Todas las recetas deben tener como ingrediente protagonista: ${principal}.`,
+          `17. El ingrediente protagonista debe ser ${principal}. Debe estar disponible en el inventario.`,
         ]
       : []),
   ].join("\n");

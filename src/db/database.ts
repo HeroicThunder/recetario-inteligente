@@ -1,5 +1,7 @@
 import * as SQLite from "expo-sqlite";
 import * as Crypto from "expo-crypto";
+import { normalizar } from "../utils/texto";
+import { aBase } from "../utils/unidades";
 
 export type Ingrediente = {
   id: number;
@@ -503,6 +505,225 @@ export async function agregarCompra(
   );
 }
 
+
+export type FaltanteReceta = {
+  nombre: string;
+  cantidad: number;
+  unidad: string;
+};
+
+// Calcula cuánto falta de cada ingrediente según la despensa actual.
+async function calcularFaltantesInterno(
+  receta: {
+    ingredientes?: {
+      nombre: string;
+      cantidad: number;
+      unidad: string;
+    }[];
+  },
+  usuarioId: number,
+): Promise<FaltanteReceta[]> {
+  const db = await getDb();
+  const ingredientes = receta.ingredientes ?? [];
+
+  if (ingredientes.length === 0) {
+    throw new Error("La receta no contiene ingredientes.");
+  }
+
+  const existencias = await db.getAllAsync<{
+    nombre: string;
+    cantidad: number;
+    unidad: string;
+  }>(
+    `SELECT nombre, cantidad, unidad
+     FROM ingredientes
+     WHERE usuario_id = ?`,
+    usuarioId,
+  );
+
+  const requeridos = new Map<
+    string,
+    {
+      nombre: string;
+      unidad: string;
+      familia: string;
+      cantidadBase: number;
+    }
+  >();
+
+  for (const item of ingredientes) {
+    if (
+      !item.nombre?.trim() ||
+      !Number.isFinite(item.cantidad) ||
+      item.cantidad <= 0 ||
+      !item.unidad?.trim()
+    ) {
+      throw new Error("La receta contiene un ingrediente inválido.");
+    }
+
+    const base = aBase(item.cantidad, item.unidad);
+
+    if (!base) {
+      throw new Error(
+        `No se reconoce la unidad de ${item.nombre}: ${item.unidad}.`,
+      );
+    }
+
+    const nombreNormalizado = normalizar(item.nombre);
+    const llave = `${nombreNormalizado}|${base.familia}`;
+    const anterior = requeridos.get(llave);
+
+    requeridos.set(llave, {
+      nombre: anterior?.nombre ?? item.nombre.trim(),
+      unidad: anterior?.unidad ?? item.unidad,
+      familia: base.familia,
+      cantidadBase:
+        (anterior?.cantidadBase ?? 0) + base.valor,
+    });
+  }
+
+  const faltantes: FaltanteReceta[] = [];
+
+  for (const requerido of requeridos.values()) {
+    let disponibleBase = 0;
+
+    for (const existencia of existencias) {
+      if (
+        normalizar(existencia.nombre) !==
+        normalizar(requerido.nombre)
+      ) {
+        continue;
+      }
+
+      const base = aBase(
+        existencia.cantidad,
+        existencia.unidad,
+      );
+
+      if (base?.familia === requerido.familia) {
+        disponibleBase += base.valor;
+      }
+    }
+
+    const diferencia =
+      requerido.cantidadBase - disponibleBase;
+
+    if (diferencia > 1e-8) {
+      const unidadBase = aBase(1, requerido.unidad);
+
+      if (!unidadBase) {
+        throw new Error(
+          `No se puede convertir la unidad de ${requerido.nombre}.`,
+        );
+      }
+
+      const cantidadFaltante =
+        diferencia / unidadBase.valor;
+
+      faltantes.push({
+        nombre: requerido.nombre,
+        cantidad: Number(cantidadFaltante.toFixed(6)),
+        unidad: requerido.unidad,
+      });
+    }
+  }
+
+  return faltantes;
+}
+
+// Consulta los faltantes de una receta usando la despensa actual.
+export async function obtenerFaltantesReceta(
+  receta: {
+    ingredientes?: {
+      nombre: string;
+      cantidad: number;
+      unidad: string;
+    }[];
+  },
+): Promise<FaltanteReceta[]> {
+  const usuarioId = await obtenerUsuarioActualId();
+
+  return calcularFaltantesInterno(receta, usuarioId);
+}
+
+// Agrega los faltantes a Súper sin duplicar solicitudes de la misma receta.
+export async function agregarFaltantesACompras(
+  receta: {
+    nombre?: string;
+    ingredientes?: {
+      nombre: string;
+      cantidad: number;
+      unidad: string;
+    }[];
+  },
+): Promise<FaltanteReceta[]> {
+  const db = await getDb();
+  const usuarioId = await obtenerUsuarioActualId();
+  const nombreReceta = receta.nombre?.trim() || "Receta favorita";
+
+  let faltantes: FaltanteReceta[] = [];
+
+  await db.withTransactionAsync(async () => {
+    faltantes = await calcularFaltantesInterno(
+      receta,
+      usuarioId,
+    );
+
+    const compras = await db.getAllAsync<{
+      id: number;
+      nombre: string;
+      cantidad: number;
+      unidad: string;
+      receta_origen: string | null;
+      comprado: number;
+    }>(
+      `SELECT id, nombre, cantidad, unidad, receta_origen, comprado
+       FROM compras
+       WHERE usuario_id = ?`,
+      usuarioId,
+    );
+
+    for (const faltante of faltantes) {
+      const existente = compras.find(
+        (item) =>
+          item.comprado === 0 &&
+          item.receta_origen === nombreReceta &&
+          normalizar(item.nombre) ===
+            normalizar(faltante.nombre) &&
+          item.unidad === faltante.unidad,
+      );
+
+      if (existente) {
+        // Evita duplicar cantidades si se pulsa varias veces.
+        await db.runAsync(
+          `UPDATE compras
+           SET cantidad = ?
+           WHERE id = ? AND usuario_id = ?`,
+          Math.max(existente.cantidad, faltante.cantidad),
+          existente.id,
+          usuarioId,
+        );
+      } else {
+        await db.runAsync(
+          `INSERT INTO compras
+           (usuario_id, nombre, cantidad, unidad,
+            comprado, receta_origen, creado_en)
+           VALUES (?, ?, ?, ?, 0, ?, ?)`,
+          usuarioId,
+          faltante.nombre,
+          faltante.cantidad,
+          faltante.unidad,
+          nombreReceta,
+          new Date().toISOString(),
+        );
+      }
+    }
+  });
+
+  return faltantes;
+}
+
+
 export async function cambiarEstadoCompra(id: number, comprado: boolean) {
   const db = await getDb();
   const usuarioId = await obtenerUsuarioActualId();
@@ -668,6 +889,184 @@ export async function guardarPreparacion(
     new Date().toISOString(),
   );
 }
+
+
+export async function finalizarPreparacion(
+  recetaNombre: string,
+  receta: {
+    ingredientes?: {
+      nombre: string;
+      cantidad: number;
+      unidad: string;
+    }[];
+  },
+  fotoUri: string | null = null,
+): Promise<boolean> {
+  const db = await getDb();
+  const usuarioId = await obtenerUsuarioActualId();
+
+  const ingredientes = receta.ingredientes ?? [];
+
+  if (ingredientes.length === 0) {
+    throw new Error("La receta no contiene ingredientes.");
+  }
+
+  // Agrupar los ingredientes repetidos.
+  const requeridos = new Map<
+    string,
+    { nombre: string; familia: string; cantidadBase: number }
+  >();
+
+  for (const item of ingredientes) {
+    if (
+      !item.nombre?.trim() ||
+      !Number.isFinite(item.cantidad) ||
+      item.cantidad <= 0 ||
+      !item.unidad?.trim()
+    ) {
+      throw new Error("La receta contiene un ingrediente inválido.");
+    }
+
+    const base = aBase(item.cantidad, item.unidad);
+
+    if (!base) {
+      throw new Error(
+        `No se reconoce la unidad de ${item.nombre}: ${item.unidad}.`,
+      );
+    }
+
+    const nombre = normalizar(item.nombre);
+    const llave = `${nombre}|${base.familia}`;
+
+    const anterior = requeridos.get(llave);
+
+    requeridos.set(llave, {
+      nombre,
+      familia: base.familia,
+      cantidadBase:
+        (anterior?.cantidadBase ?? 0) + base.valor,
+    });
+  }
+
+  await db.withTransactionAsync(async () => {
+    const existencias = await db.getAllAsync<{
+      id: number;
+      nombre: string;
+      cantidad: number;
+      unidad: string;
+    }>(
+      `SELECT id, nombre, cantidad, unidad
+       FROM ingredientes
+       WHERE usuario_id = ?
+       ORDER BY id ASC`,
+      usuarioId,
+    );
+
+    // Comprobar todas las cantidades antes de descontar.
+    for (const requerido of requeridos.values()) {
+      let totalDisponible = 0;
+
+      for (const existencia of existencias) {
+        if (
+          normalizar(existencia.nombre) !== requerido.nombre
+        ) {
+          continue;
+        }
+
+        const base = aBase(
+          existencia.cantidad,
+          existencia.unidad,
+        );
+
+        if (base?.familia === requerido.familia) {
+          totalDisponible += base.valor;
+        }
+      }
+
+      if (totalDisponible + 1e-8 < requerido.cantidadBase) {
+        throw new Error(
+          `No tienes suficiente ${requerido.nombre} en tu despensa. Necesitas ${requerido.cantidadBase} unidades base y tienes ${totalDisponible}.`,
+        );
+      }
+    }
+
+    // Descontar cada ingrediente utilizando su unidad original.
+    for (const requerido of requeridos.values()) {
+      let pendiente = requerido.cantidadBase;
+
+      const coincidencias = existencias.filter((existencia) => {
+        if (normalizar(existencia.nombre) !== requerido.nombre) {
+          return false;
+        }
+
+        const base = aBase(1, existencia.unidad);
+        return base?.familia === requerido.familia;
+      });
+
+      for (const existencia of coincidencias) {
+        if (pendiente <= 1e-8) break;
+
+        const factor = aBase(1, existencia.unidad);
+
+        if (!factor) continue;
+
+        const cantidadBaseDisponible =
+          existencia.cantidad * factor.valor;
+
+        const descontarBase = Math.min(
+          cantidadBaseDisponible,
+          pendiente,
+        );
+
+        const cantidadRestante =
+          existencia.cantidad -
+          descontarBase / factor.valor;
+
+        pendiente -= descontarBase;
+
+        if (cantidadRestante <= 1e-8) {
+          await db.runAsync(
+            `DELETE FROM ingredientes
+             WHERE id = ? AND usuario_id = ?`,
+            existencia.id,
+            usuarioId,
+          );
+        } else {
+          await db.runAsync(
+            `UPDATE ingredientes
+             SET cantidad = ?
+             WHERE id = ? AND usuario_id = ?`,
+            Number(cantidadRestante.toFixed(6)),
+            existencia.id,
+            usuarioId,
+          );
+        }
+      }
+
+      if (pendiente > 1e-8) {
+        throw new Error(
+          `No se pudo completar el descuento de ${requerido.nombre}.`,
+        );
+      }
+    }
+
+    // Guardar el historial únicamente si todos los descuentos funcionaron.
+    await db.runAsync(
+      `INSERT INTO preparaciones
+       (usuario_id, receta_nombre, receta_json, foto_uri,
+        ingredientes_descontados, terminado_en)
+       VALUES (?, ?, ?, ?, 1, ?)`,
+      usuarioId,
+      recetaNombre,
+      JSON.stringify(receta),
+      fotoUri,
+      new Date().toISOString(),
+    );
+  });
+
+  return true;
+}
+
 
 export async function listarPreparaciones(): Promise<PreparacionGuardada[]> {
   const db = await getDb();

@@ -5,7 +5,7 @@ import { colores, fuentes } from "../theme";
 const opciones = [
   { ruta: "/inicio", icono: "⌂", etiqueta: "Inicio" },
   { ruta: "/despensa", icono: "▤", etiqueta: "Despensa" },
-  { ruta: "/stock", icono: "▥", etiqueta: "Stock" },
+  { ruta: "/super", icono: "🛒", etiqueta: "Súper" },
   { ruta: "/sugerencias", icono: "✧", etiqueta: "Recetas" },
   { ruta: "/perfil", icono: "◉", etiqueta: "Perfil" },
 ];

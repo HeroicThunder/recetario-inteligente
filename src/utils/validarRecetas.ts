@@ -1,25 +1,21 @@
+
 import type { Ingrediente } from "../db/database";
 import type {
   IngredienteReceta,
   Receta,
   RecetaEvaluada,
 } from "../types/receta";
+
 import { normalizar } from "./texto";
 import { aBase } from "./unidades";
 
-// Ingredientes que se asumen disponibles aunque no estén en la despensa (decisión de la spec F02)
-const PERMITIDOS = ["agua", "sal"];
 const DIFICULTADES = ["facil", "media", "dificil"];
-
-// Una receta solo se muestra si le faltan pocos ingredientes (decisión de la spec F02, opción B)
-export const MAX_FALTANTES = 3;
-export const MIN_PORCENTAJE = 50;
 const EPS = 1e-9;
 
 export type ResultadoValidacion = {
-  formatoValido: boolean; // false si la respuesta ni siquiera es una lista
-  validas: RecetaEvaluada[]; // recetas que cumplen estructura y disponibilidad, mejores primero (máximo 3)
-  descartadas: number; // recetas descartadas por incumplir alguna regla
+  formatoValido: boolean;
+  validas: RecetaEvaluada[];
+  descartadas: number;
 };
 
 function esReceta(x: any): x is Receta {
@@ -29,6 +25,8 @@ function esReceta(x: any): x is Receta {
     x.nombre.trim() !== "" &&
     typeof x.descripcion === "string" &&
     typeof x.tiempo_minutos === "number" &&
+    Number.isFinite(x.tiempo_minutos) &&
+    x.tiempo_minutos > 0 &&
     DIFICULTADES.includes(x.dificultad) &&
     Array.isArray(x.ingredientes) &&
     x.ingredientes.length > 0 &&
@@ -36,92 +34,141 @@ function esReceta(x: any): x is Receta {
       (i: any) =>
         i &&
         typeof i.nombre === "string" &&
+        i.nombre.trim() !== "" &&
         typeof i.cantidad === "number" &&
+        Number.isFinite(i.cantidad) &&
         i.cantidad > 0 &&
-        typeof i.unidad === "string",
+        typeof i.unidad === "string" &&
+        i.unidad.trim() !== "",
+    ) &&
+    Array.isArray(x.procedimiento) &&
+    x.procedimiento.length >= 3 &&
+    x.procedimiento.every(
+      (paso: any) =>
+        typeof paso === "string" && paso.trim().length > 0,
     )
   );
 }
 
-// Compara la receta con la despensa. Devuelve null si debe descartarse.
-// Las cantidades se comparan en unidad base (200 g equivalen a 0.2 kg) y las existencias
-// se van consumiendo, así que un ingrediente repetido en la receta no se cuenta dos veces.
 function evaluar(
   receta: Receta,
   inventario: Ingrediente[],
+  principal?: string,
 ): RecetaEvaluada | null {
-  const restante = new Map<string, number>(); // existencias en unidad base por ingrediente y familia
-  const nombresEnDespensa = new Set<string>();
+  // Existencias agrupadas por nombre normalizado y familia de unidad.
+  const existencias = new Map<string, number>();
 
-  for (const i of inventario) {
-    const clave = normalizar(i.nombre);
-    nombresEnDespensa.add(clave);
-    const b = aBase(i.cantidad, i.unidad);
-    if (!b) continue;
-    const llave = `${clave}|${b.familia}`;
-    restante.set(llave, (restante.get(llave) ?? 0) + b.valor);
+  for (const item of inventario) {
+    if (item.cantidad <= 0) continue;
+
+    const nombre = normalizar(item.nombre);
+    const base = aBase(item.cantidad, item.unidad);
+
+    if (!base) continue;
+
+    const llave = `${nombre}|${base.familia}`;
+
+    existencias.set(
+      llave,
+      (existencias.get(llave) ?? 0) + base.valor,
+    );
   }
 
-  const disponibles: IngredienteReceta[] = [];
-  const faltantes: IngredienteReceta[] = [];
+  const restante = new Map(existencias);
+  const requeridos = new Map<string, number>();
 
-  for (const ing of receta.ingredientes) {
-    const clave = normalizar(ing.nombre);
-    if (PERMITIDOS.includes(clave)) continue;
+  const protagonista = principal
+    ? normalizar(principal)
+    : null;
 
-    // No está en la despensa: falta completo
-    if (!nombresEnDespensa.has(clave)) {
-      faltantes.push(ing);
-      continue;
+  let contieneProtagonista = !protagonista;
+
+  // Primero acumular cantidades repetidas.
+  for (const ingrediente of receta.ingredientes) {
+    const nombre = normalizar(ingrediente.nombre);
+
+    if (nombre === protagonista) {
+      contieneProtagonista = true;
     }
 
-    // Está en la despensa pero no se puede comparar (unidad desconocida o de otra familia): receta incoherente
-    const base = aBase(ing.cantidad, ing.unidad);
+    const base = aBase(
+      ingrediente.cantidad,
+      ingrediente.unidad,
+    );
+
     if (!base) return null;
-    const llave = `${clave}|${base.familia}`;
-    if (!restante.has(llave)) return null;
 
-    const existente = restante.get(llave) as number;
-    if (existente + EPS >= base.valor) {
-      restante.set(llave, existente - base.valor);
-      disponibles.push(ing);
-    } else {
-      // Hay algo, pero no alcanza: se cuenta como faltante por la diferencia
-      restante.set(llave, 0);
-      const falta = ((base.valor - existente) / base.valor) * ing.cantidad;
-      faltantes.push({ ...ing, cantidad: Math.round(falta * 100) / 100 });
+    const llave = `${nombre}|${base.familia}`;
+
+    if (!existencias.has(llave)) {
+      return null;
     }
+
+    requeridos.set(
+      llave,
+      (requeridos.get(llave) ?? 0) + base.valor,
+    );
   }
 
-  const total = disponibles.length + faltantes.length;
-  if (total === 0) return null; // solo usa agua y sal
+  if (!contieneProtagonista) return null;
 
-  const porcentaje = Math.round((disponibles.length / total) * 100);
-  if (faltantes.length > MAX_FALTANTES || porcentaje < MIN_PORCENTAJE)
-    return null;
+  // Comprobar que alcanza para TODOS los ingredientes.
+  for (const [llave, cantidadNecesaria] of requeridos) {
+    const disponible = restante.get(llave) ?? 0;
 
-  return { ...receta, disponibles, faltantes, porcentaje };
+    if (disponible + EPS < cantidadNecesaria) {
+      return null;
+    }
+
+    restante.set(
+      llave,
+      Math.max(0, disponible - cantidadNecesaria),
+    );
+  }
+
+  const disponibles: IngredienteReceta[] = receta.ingredientes.map(
+    (item) => ({ ...item }),
+  );
+
+  return {
+    ...receta,
+    disponibles,
+    faltantes: [],
+    porcentaje: 100,
+  };
 }
 
 export function validarRecetas(
   crudo: unknown,
   inventario: Ingrediente[],
+  principal?: string,
 ): ResultadoValidacion {
-  if (!Array.isArray(crudo))
-    return { formatoValido: false, validas: [], descartadas: 0 };
+  if (!Array.isArray(crudo)) {
+    return {
+      formatoValido: false,
+      validas: [],
+      descartadas: 0,
+    };
+  }
 
   const validas: RecetaEvaluada[] = [];
   let descartadas = 0;
 
   for (const candidata of crudo) {
     const evaluada = esReceta(candidata)
-      ? evaluar(candidata, inventario)
+      ? evaluar(candidata, inventario, principal)
       : null;
-    if (evaluada) validas.push(evaluada);
-    else descartadas++;
+
+    if (evaluada) {
+      validas.push(evaluada);
+    } else {
+      descartadas++;
+    }
   }
 
-  // Primero las que cubren mayor porcentaje de la despensa
-  validas.sort((a, b) => b.porcentaje - a.porcentaje);
-  return { formatoValido: true, validas: validas.slice(0, 3), descartadas };
+  return {
+    formatoValido: true,
+    validas: validas.slice(0, 3),
+    descartadas,
+  };
 }

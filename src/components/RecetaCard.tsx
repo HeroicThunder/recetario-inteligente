@@ -1,6 +1,22 @@
-import { View, Text, StyleSheet } from "react-native";
+
+import { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Alert,
+} from "react-native";
+import { useRouter } from "expo-router";
+
 import { colores, fuentes, radios } from "../theme";
 import type { RecetaEvaluada } from "../types/receta";
+
+import {
+  listarFavoritos,
+  guardarFavorito,
+  eliminarFavorito,
+} from "../db/database";
 
 const ETIQUETA: Record<string, string> = {
   facil: "FÁCIL",
@@ -13,8 +29,103 @@ type Props = {
 };
 
 export default function RecetaCard({ receta }: Props) {
+  const router = useRouter();
+
   const total = receta.disponibles.length + receta.faltantes.length;
   const completa = receta.faltantes.length === 0;
+
+  const [favoritoId, setFavoritoId] = useState<number | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    let activo = true;
+
+    async function comprobarFavorito() {
+      try {
+        const favoritos = await listarFavoritos();
+
+        const encontrado = favoritos.find((favorito) => {
+          try {
+            const guardada = JSON.parse(favorito.receta_json);
+
+            return (
+              guardada.nombre?.trim().toLowerCase() ===
+              receta.nombre.trim().toLowerCase()
+            );
+          } catch {
+            return false;
+          }
+        });
+
+        if (activo) setFavoritoId(encontrado?.id ?? null);
+      } catch (error) {
+        console.error("Error al consultar favoritos:", error);
+      }
+    }
+
+    comprobarFavorito();
+
+    return () => {
+      activo = false;
+    };
+  }, [receta.nombre]);
+
+  function abrirDetalle() {
+    router.push({
+      pathname: "/detalle-receta" as any,
+      params: {
+        receta: JSON.stringify(receta),
+      },
+    });
+  }
+
+  async function alternarFavorito() {
+    if (guardando) return;
+
+    setGuardando(true);
+
+    try {
+      if (favoritoId !== null) {
+        await eliminarFavorito(favoritoId);
+        setFavoritoId(null);
+
+        Alert.alert("Favoritos", "La receta se eliminó de tus favoritos.");
+      } else {
+        await guardarFavorito(receta);
+
+        const favoritos = await listarFavoritos();
+
+        const encontrado = favoritos.find((favorito) => {
+          try {
+            const guardada = JSON.parse(favorito.receta_json);
+
+            return (
+              guardada.nombre?.trim().toLowerCase() ===
+              receta.nombre.trim().toLowerCase()
+            );
+          } catch {
+            return false;
+          }
+        });
+
+        setFavoritoId(encontrado?.id ?? null);
+
+        Alert.alert(
+          "¡Receta guardada!",
+          "Ahora puedes encontrarla en tus favoritos."
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar tu lista de favoritos."
+      );
+    } finally {
+      setGuardando(false);
+    }
+  }
 
   return (
     <View style={s.tarjeta}>
@@ -22,6 +133,7 @@ export default function RecetaCard({ receta }: Props) {
         {receta.tiempo_minutos} MIN ·{" "}
         {ETIQUETA[receta.dificultad] ?? receta.dificultad}
       </Text>
+
       <Text style={s.nombre}>{receta.nombre}</Text>
       <Text style={s.descripcion}>{receta.descripcion}</Text>
 
@@ -31,6 +143,7 @@ export default function RecetaCard({ receta }: Props) {
         </Text>
         <Text style={s.porcentaje}>{receta.porcentaje}%</Text>
       </View>
+
       <View style={s.pista}>
         <View
           style={[
@@ -52,10 +165,12 @@ export default function RecetaCard({ receta }: Props) {
             </Text>
           ))}
         </View>
+
         <View style={s.columna}>
           <Text style={[s.subtitulo, { color: colores.terracota }]}>
             Faltantes
           </Text>
+
           {completa ? (
             <Text style={s.ninguno}>Ninguno</Text>
           ) : (
@@ -67,6 +182,33 @@ export default function RecetaCard({ receta }: Props) {
           )}
         </View>
       </View>
+
+      <Pressable style={s.botonDetalle} onPress={abrirDetalle}>
+        <Text style={s.textoBotonDetalle}>Ver receta completa →</Text>
+      </Pressable>
+
+      <Pressable
+        style={[
+          s.botonFavorito,
+          favoritoId !== null && s.botonFavoritoActivo,
+          guardando && { opacity: 0.6 },
+        ]}
+        onPress={alternarFavorito}
+        disabled={guardando}
+      >
+        <Text
+          style={[
+            s.textoFavorito,
+            favoritoId !== null && s.textoFavoritoActivo,
+          ]}
+        >
+          {guardando
+            ? "Guardando..."
+            : favoritoId !== null
+              ? "♥ Guardada en Favoritos"
+              : "♡ Guardar en Favoritos"}
+        </Text>
+      </Pressable>
     </View>
   );
 }
@@ -119,9 +261,17 @@ const s = StyleSheet.create({
     overflow: "hidden",
     marginBottom: 16,
   },
-  relleno: { height: 6, borderRadius: 3 },
-  columnas: { flexDirection: "row", gap: 16 },
-  columna: { flex: 1 },
+  relleno: {
+    height: 6,
+    borderRadius: 3,
+  },
+  columnas: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  columna: {
+    flex: 1,
+  },
   subtitulo: {
     fontSize: 13,
     fontFamily: fuentes.negrita,
@@ -145,5 +295,37 @@ const s = StyleSheet.create({
     color: colores.gris,
     fontFamily: fuentes.texto,
     lineHeight: 22,
+  },
+  botonDetalle: {
+    marginTop: 18,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: colores.bosque,
+    alignItems: "center",
+  },
+  textoBotonDetalle: {
+    color: colores.blanco,
+    fontFamily: fuentes.negrita,
+    fontSize: 13,
+  },
+  botonFavorito: {
+    marginTop: 10,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colores.salvia,
+    alignItems: "center",
+  },
+  botonFavoritoActivo: {
+    backgroundColor: colores.bosque,
+    borderColor: colores.bosque,
+  },
+  textoFavorito: {
+    color: colores.bosque,
+    fontFamily: fuentes.negrita,
+    fontSize: 13,
+  },
+  textoFavoritoActivo: {
+    color: colores.blanco,
   },
 });

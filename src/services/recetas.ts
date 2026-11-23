@@ -25,7 +25,11 @@ export async function sugerirRecetas(
   for (let intento = 0; intento < 2; intento++) {
     try {
       const crudo = await generarJson(prompt, ESQUEMA_RECETAS);
-      const resultado = validarRecetas(crudo, inventario);
+      const resultado = validarRecetas(
+  crudo,
+  inventario,
+  principal,
+);
 
       if (!resultado.formatoValido)
         throw new ErrorGemini("formato", "La respuesta no es una lista");

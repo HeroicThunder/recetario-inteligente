@@ -7,3 +7,11 @@ Puedes enviar el texto y los datos de la receta mediante WhatsApp, correo, etc. 
 - Tiempo de preparación.
 - Instrucciones.
   imagen de la receta si es de favoritos imagen sacada con el celular, Puedes utilizar el menú nativo de compartir de Android. Cuando el usuario pulse el botón Compartir receta, aparecerán las aplicaciones disponibles en su teléfono.
+
+
+
+  Ideas de mejora dadas por el profesor, cambiar la paleta de colores a usados en apps de alimentos, quitar elementos innecesarios que no se utilizan, fondos que no interactuan y conectar login con supabse auth para mayor seguridad
+
+que tipo de arquitectura estas usando, QUE CARPETA ES DONDE ESTA EL PROYECTO EXPO GO, QUE OTROS PROYECTOS TIENES AHI, POR QUE SI ES POR CAPAS CADA CAPA ES UN PROYECTO INDIVIDUAL, SI ES MONOLITO, SI ES A LA LARGA Y PENSANDO SI ES PARA USUARIOS, SERIA LO MEJOR?, TU PROTEGES TU CODIGO? PONER LAS COSAS DONDE MEJOR NOS CONVENGA, DEPENDE DE LAS NECESIDADES DE NUESTRA APLICACION O COMO NOSOTROS QUEREMOS ASEGURAR LO QUE QUEREMOS, QUE TODA LA LOGICA DE NEGOCIO ESTE APARTADA, TAMBIEN DONDE ESTA CADA PARTE, SE GUARDA INGREDIENTES, SE CREA EL PROMP, SE CREA LAS IDEAS
+
+SERIE DE TED LASSO

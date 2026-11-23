@@ -21,7 +21,16 @@ export default function SugerenciasScreen() {
 
   return (
     <View style={s.pantalla}>
-      <Pressable onPress={() => router.back()} hitSlop={12}>
+      <Pressable
+  onPress={() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/inicio");
+    }
+  }}
+  hitSlop={12}
+>
         <Text style={s.volver}>← Despensa</Text>
       </Pressable>
       <Text style={s.titulo}>Sugerencias</Text>
@@ -42,7 +51,7 @@ export default function SugerenciasScreen() {
           {tipoError === "despensa_vacia" ? (
             <Pressable
               style={[comunes.boton, s.botonCentro]}
-              onPress={() => router.back()}
+              onPress={() => router.replace("/despensa")}
             >
               <Text style={comunes.botonTexto}>Ir a la despensa</Text>
             </Pressable>

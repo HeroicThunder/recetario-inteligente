@@ -116,6 +116,26 @@ export default function InicioScreen() {
           <Text style={styles.flecha}>›</Text>
         </Pressable>
 
+<Pressable
+  style={styles.acceso}
+  onPress={() => router.push("/super")}
+>
+  <View
+    style={[styles.accesoIcono, { backgroundColor: colores.compras }]}
+  >
+    <Text style={styles.emoji}>🛒</Text>
+  </View>
+
+  <View style={styles.accesoTexto}>
+    <Text style={styles.accesoTitulo}>Lista de compras</Text>
+    <Text style={styles.accesoDescripcion}>
+      Organiza lo que necesitas comprar
+    </Text>
+  </View>
+
+  <Text style={styles.flecha}>›</Text>
+</Pressable>
+
         <Pressable
           style={styles.acceso}
           onPress={() => router.push("/sugerencias")}
