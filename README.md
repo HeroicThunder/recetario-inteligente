@@ -1,56 +1,70 @@
-# Welcome to your Expo app 👋
+# 🍽️ SazónIA — Recetario Inteligente
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+SazónIA es una aplicación móvil desarrollada como proyecto académico que combina la administración de ingredientes con inteligencia artificial para ayudar a los usuarios a descubrir y organizar recetas.
 
-## Get started
+## ✨ Características principales
 
-1. Install dependencies
+- **Despensa:** administración de ingredientes disponibles.
+- **Lista de compras:** organización de ingredientes que se necesitan comprar.
+- **Generación inteligente de recetas:** sugerencias mediante Gemini API, utilizando los ingredientes disponibles o uno seleccionado.
+- **Favoritos:** almacenamiento de recetas preferidas.
+- **Fotografías:** posibilidad de agregar imágenes a las recetas.
+- **Exportación PDF:** generación y compartición de recetas en formato PDF.
+- **Almacenamiento local:** persistencia de información mediante SQLite.
+
+## 🛠️ Tecnologías utilizadas
+
+- React Native
+- Expo
+- TypeScript
+- Expo Router
+- SQLite
+- Gemini API
+
+## 📱 Plataforma
+
+Aplicación desarrollada para dispositivos Android.
+
+## ⚙️ Instalación y ejecución
+
+1. Clonar el repositorio:
+
+   ```bash
+   git clone https://github.com/HeroicThunder/recetario-inteligente.git
+   ```
+
+2. Entrar a la carpeta:
+
+   ```bash
+   cd recetario-inteligente
+   ```
+
+3. Instalar las dependencias:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+4. Configurar las variables de entorno necesarias para Gemini API, siguiendo la configuración del proyecto.
+
+5. Iniciar Expo:
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+6. Escanear el código QR con Expo Go para probar la aplicación, siempre que la versión instalada sea compatible.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 📁 Documentación
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+La carpeta `docs` contiene los documentos relacionados con el desarrollo:
 
-## Get a fresh project
+- `BITACORA_IA.md`: registro del uso de herramientas de inteligencia artificial.
+- `DIARIO_DECISIONES.md`: descripción de las decisiones técnicas y de diseño.
 
-When you're ready, run:
+## 👨‍💻 Proyecto académico
 
-```bash
-npm run reset-project
-```
+**Nombre:** SazónIA  
+**Repositorio:** [GitHub - recetario-inteligente](https://github.com/HeroicThunder/recetario-inteligente)
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-### Other setup steps
-
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Desarrollado como proyecto académico de aplicación móvil.
