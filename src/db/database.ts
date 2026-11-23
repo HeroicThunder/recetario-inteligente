@@ -1051,17 +1051,61 @@ export async function finalizarPreparacion(
     }
 
     // Guardar el historial únicamente si todos los descuentos funcionaron.
-    await db.runAsync(
-      `INSERT INTO preparaciones
-       (usuario_id, receta_nombre, receta_json, foto_uri,
-        ingredientes_descontados, terminado_en)
-       VALUES (?, ?, ?, ?, 1, ?)`,
-      usuarioId,
-      recetaNombre,
-      JSON.stringify(receta),
-      fotoUri,
-      new Date().toISOString(),
-    );
+await db.runAsync(
+  `INSERT INTO preparaciones
+   (usuario_id, receta_nombre, receta_json, foto_uri,
+    ingredientes_descontados, terminado_en)
+   VALUES (?, ?, ?, ?, 1, ?)`,
+  usuarioId,
+  recetaNombre,
+  JSON.stringify(receta),
+  fotoUri,
+  new Date().toISOString(),
+);
+
+// Guardar o actualizar la receta en Favoritos.
+const favoritosExistentes = await db.getAllAsync<{
+  id: number;
+  receta_json: string;
+}>(
+  `SELECT id, receta_json
+   FROM favoritos
+   WHERE usuario_id = ?`,
+  usuarioId,
+);
+
+const favoritoExistente = favoritosExistentes.find((favorito) => {
+  try {
+    const datos = JSON.parse(favorito.receta_json);
+    return normalizar(datos.nombre ?? "") === normalizar(recetaNombre);
+  } catch {
+    return false;
+  }
+});
+
+if (favoritoExistente) {
+  await db.runAsync(
+    `UPDATE favoritos
+     SET receta_json = ?,
+         foto_uri = COALESCE(?, foto_uri)
+     WHERE id = ? AND usuario_id = ?`,
+    JSON.stringify(receta),
+    fotoUri,
+    favoritoExistente.id,
+    usuarioId,
+  );
+} else {
+  await db.runAsync(
+    `INSERT INTO favoritos
+     (usuario_id, receta_json, foto_uri, creado_en)
+     VALUES (?, ?, ?, ?)`,
+    usuarioId,
+    JSON.stringify(receta),
+    fotoUri,
+    new Date().toISOString(),
+  );
+}
+
   });
 
   return true;

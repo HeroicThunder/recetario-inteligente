@@ -36,7 +36,18 @@
       "expo-sqlite",
       "expo-font",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "SazónIA necesita acceder a tu cámara para fotografiar tus preparaciones.",
+          "photosPermission": "SazónIA necesita acceder a tus fotografías para agregar imágenes a tus recetas.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-notifications",
+      "@react-native-community/datetimepicker",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

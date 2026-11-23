@@ -142,6 +142,29 @@ export default function PerfilScreen() {
           <Text style={styles.flecha}>›</Text>
         </Pressable>
 
+
+{/* Configuración de recordatorios */}
+<Pressable
+  style={styles.botonOpcion}
+  onPress={() => router.push("/notificaciones")}
+>
+  <View style={styles.iconoHistorial}>
+    <Text style={styles.iconoHistorialTexto}>♧</Text>
+  </View>
+
+  <View style={styles.textoOpcion}>
+    <Text style={styles.tituloOpcion}>
+      Recordatorios y sugerencias
+    </Text>
+    <Text style={styles.descripcionOpcion}>
+      Configura tus avisos y sugerencias de recetas.
+    </Text>
+  </View>
+
+  <Text style={styles.flecha}>›</Text>
+</Pressable>
+
+
         <View style={styles.info}>
           <Text style={styles.infoIcono}>✳</Text>
           <View style={{ flex: 1 }}>
